@@ -11,6 +11,11 @@
     inherit (nixpkgs) lib;
     forAllSystems = lib.genAttrs lib.systems.flakeExposed;
   in {
+
+    nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
+      modules = [./configuration.nix];
+    };
+    
     devShells = forAllSystems (
       system: let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -32,10 +37,6 @@
             uv sync
             . .venv/bin/activate
           '';
-        };
-
-        nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
-          modules = [./configuration.nix];
         };
       }
     );
