@@ -1,16 +1,45 @@
 {
   inputs = {
-    # This is pointing to an unstable release.
-    # If you prefer a stable release instead, you can change the word unstable to the latest number shown here: https://nixos.org/download
-    # i.e. nixos-24.11
-    # Use `nix flake update` to update the flake to the latest revision of the chosen release channel.
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-26.05";
   };
-  outputs = inputs@{ self, nixpkgs, ... }: {
-    # NOTE: 'nixos' is the default hostname
-    nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
-      modules = [ ./configuration.nix ];
-    };
+
+  outputs = {nixpkgs, ...}: let
+    inherit (nixpkgs) lib;
+    forAllSystems = lib.genAttrs lib.systems.flakeExposed;
+  in {
+    devShells = forAllSystems (
+      system: let
+        pkgs = nixpkgs.legacyPackages.${system};
+      in {
+        default = pkgs.mkShell {
+          packages = [
+            pkgs.python3
+            pkgs.uv
+          ];
+
+          env = lib.optionalAttrs pkgs.stdenv.isLinux {
+            # Python libraries often load native shared objects using dlopen(3).
+            # Setting LD_LIBRARY_PATH makes the dynamic library loader aware of libraries without using RPATH for lookup.
+            LD_LIBRARY_PATH = lib.makeLibraryPath pkgs.pythonManylinuxPackages.manylinux1;
+          };
+
+          shellHook = ''
+            unset PYTHONPATH
+            uv sync
+            . .venv/bin/activate
+          '';
+        };
+
+        outputs = inputs @ {
+          self,
+          nixpkgs,
+          ...
+        }: {
+          nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
+            modules = [./configuration.nix];
+          };
+        };
+      }
+    );
   };
 }
-
