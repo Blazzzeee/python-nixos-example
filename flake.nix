@@ -10,12 +10,18 @@
   }: let
     inherit (nixpkgs) lib;
     forAllSystems = lib.genAttrs lib.systems.flakeExposed;
-  in {
 
+    server = import ./nix/server.nix;
+  in {
     nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
       modules = [./configuration.nix];
     };
-    
+
+    packages.x86_64-linux = {
+      default = server;
+      server = server;
+    };
+
     devShells = forAllSystems (
       system: let
         pkgs = nixpkgs.legacyPackages.${system};

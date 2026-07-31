@@ -2,8 +2,10 @@
 name = "fastapi-app"
 version = "0.1.0"
 description = "this is deployed via nixos"
-authors = [ ]
 requires-python = ">=3.13"
 dependencies = [
     "fastapi[standard]>=0.141.1",
 ]
+
+[project.scripts]
+serve = "app.main:main"
