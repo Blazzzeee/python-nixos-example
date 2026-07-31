@@ -3,7 +3,11 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixos-26.05";
   };
 
-  outputs = {nixpkgs, ...}: let
+  outputs = inputs @ {
+    self,
+    nixpkgs,
+    ...
+  }: let
     inherit (nixpkgs) lib;
     forAllSystems = lib.genAttrs lib.systems.flakeExposed;
   in {
@@ -30,14 +34,8 @@
           '';
         };
 
-        outputs = inputs @ {
-          self,
-          nixpkgs,
-          ...
-        }: {
-          nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
-            modules = [./configuration.nix];
-          };
+        nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
+          modules = [./configuration.nix];
         };
       }
     );
