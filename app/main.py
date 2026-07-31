@@ -1,3 +1,4 @@
+import uvicorn
 from fastapi import FastAPI
 
 app = FastAPI()
@@ -7,5 +8,5 @@ app = FastAPI()
 def root():
     return {"Hello": "World"}
 
-if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=8080)
+def main():
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000)

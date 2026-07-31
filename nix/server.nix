@@ -1,32 +1,13 @@
 {
-  description = "basic python project wrapper";
-
-  inputs = {
-    pyproject-nix = {
-      url = "github:nix-community/pyproject.nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+  pkgs,
+  pyproject-nix,
+}: let
+  project = pyproject-nix.lib.project.loadPyproject {
+    projectRoot = ../.;
   };
 
-  outputs = {
-    nixpkgs,
-    pyproject-nix,
-    ...
-  }: let
-    system = "x86_64-linux";
-    inherit (nixpkgs) lib;
+  python = pkgs.python3;
 
-    project = pyproject-nix.lib.project.loadPyproject {
-      projectRoot = ../.;
-    };
-
-    pkgs = nixpkgs.legacyPackages.${system};
-
-    python = pkgs.python3;
-  in {
-    packages.${system}.default = let
-      attrs = project.renderers.buildPythonPackage {inherit python;};
-    in
-      python.pkgs.buildPythonPackage attrs;
-  };
-}
+  attrs = project.renderers.buildPythonPackage {inherit python;};
+in
+  python.pkgs.buildPythonPackage attrs

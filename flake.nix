@@ -1,50 +1,33 @@
 {
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-26.05";
+
+    pyproject-nix = {
+      url = "github:nix-community/pyproject.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = inputs @ {
     self,
     nixpkgs,
+    pyproject-nix,
     ...
   }: let
+    system = "x86_64-linux";
     inherit (nixpkgs) lib;
-    forAllSystems = lib.genAttrs lib.systems.flakeExposed;
+    pkgs = nixpkgs.legacyPackages.${system};
 
-    server = import ./nix/server.nix;
+    server = import ./nix/server.nix {
+      inherit pkgs pyproject-nix;
+    };
   in {
     nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
       modules = [./configuration.nix];
     };
 
     packages.x86_64-linux = {
-      default = server;
       server = server;
     };
-
-    devShells = forAllSystems (
-      system: let
-        pkgs = nixpkgs.legacyPackages.${system};
-      in {
-        default = pkgs.mkShell {
-          packages = [
-            pkgs.python3
-            pkgs.uv
-          ];
-
-          env = lib.optionalAttrs pkgs.stdenv.isLinux {
-            # Python libraries often load native shared objects using dlopen(3).
-            # Setting LD_LIBRARY_PATH makes the dynamic library loader aware of libraries without using RPATH for lookup.
-            LD_LIBRARY_PATH = lib.makeLibraryPath pkgs.pythonManylinuxPackages.manylinux1;
-          };
-
-          shellHook = ''
-            unset PYTHONPATH
-            uv sync
-            . .venv/bin/activate
-          '';
-        };
-      }
-    );
   };
 }

@@ -4,8 +4,12 @@ version = "0.1.0"
 description = "this is deployed via nixos"
 requires-python = ">=3.13"
 dependencies = [
-    "fastapi[standard]>=0.141.1",
+    "fastapi[standard]>=0.136.3",
+    "uvicorn"
 ]
 
 [project.scripts]
 serve = "app.main:main"
+
+[tool.setuptools]
+packages = ["app"]
