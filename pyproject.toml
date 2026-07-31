@@ -1,7 +1,9 @@
 [project]
-name = "impure-package"
+name = "fastapi-app"
 version = "0.1.0"
-description = "Add your description here"
+description = "this is deployed via nixos"
 authors = [ ]
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "fastapi[standard]>=0.141.1",
+]
