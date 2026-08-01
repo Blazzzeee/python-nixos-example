@@ -8,8 +8,5 @@ dependencies = [
     "uvicorn"
 ]
 
-[project.scripts]
-serve = "app.main:main"
-
 [tool.setuptools]
 packages = ["app"]

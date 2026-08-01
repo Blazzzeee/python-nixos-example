@@ -31,62 +31,67 @@
     pyproject-build-systems,
     ...
   }:
-    flake-utils.lib.eachDefaultSystem (
-      system: let
-        system = "x86_64-linux";
-        inherit (nixpkgs) lib;
-        pkgs = nixpkgs.legacyPackages.${system};
+    let
+      system = "x86_64-linux";
+      inherit (nixpkgs) lib;
+      pkgs = nixpkgs.legacyPackages.${system};
 
-        python = pkgs.python3;
+      python = pkgs.python3;
 
-        # 1. Loads and parses pyproject.toml and uv.lock
-        workspace = uv2nix.lib.workspace.loadWorkspace {
-          workspaceRoot = ./.;
-        };
+      # 1. Loads and parses pyproject.toml and uv.lock
+      workspace = uv2nix.lib.workspace.loadWorkspace {
+        workspaceRoot = ./.;
+      };
 
-        # 2. Generate a nix overlay from uv.lock via workspace
-        uvLockedOverlay = workspace.mkPyprojectOverlay {
-          sourcePreference = "wheel";
-        };
+      # 2. Generate a nix overlay from uv.lock via workspace
+      uvLockedOverlay = workspace.mkPyprojectOverlay {
+        sourcePreference = "wheel";
+      };
 
-        # 3. Makes a Python package set
-        pythonSet = (pkgs.callPackage pyproject-nix.build.packages {inherit python;})
-          .overrideScope (pkgs.lib.composeManyExtensions [
-          pyproject-build-systems.overlays.default
-          uvLockedOverlay
-        ]);
+      # 3. Makes a Python package set
+      pythonSet = (pkgs.callPackage pyproject-nix.build.packages {inherit python;})
+        .overrideScope (pkgs.lib.composeManyExtensions [
+        pyproject-build-systems.overlays.default
+        uvLockedOverlay
+      ]);
 
-        # This must exactly match in toml
-        project = "fastapi-app";
-        projNixPkg = pythonSet.${project};
+      # This must exactly match in toml
+      project = "fastapi-app";
+      projNixPkg = pythonSet.${project};
 
-        # 4. Generate a python runtime evironment
-        PythonEnv =
-          pythonSet.mkVirtualEnv
-          (projNixPkg.pname + "env")
-          workspace.deps.default;
-      in {
-        nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
-          modules = [./configuration.nix];
-        };
+      # 4. Generate a python runtime evironment
+      PythonEnv =
+        pythonSet.mkVirtualEnv
+        (projNixPkg.pname + "env")
+        workspace.deps.default;
 
-        packages.default = pkgs.stdenv.mkDerivation {
-          pname = projNixPkg.pname;
-          version = projNixPkg.version;
-          src = ./app;
+      fastapi-app = pkgs.stdenv.mkDerivation {
+        pname = projNixPkg.pname;
+        version = projNixPkg.version;
+        src = ./app;
 
-          nativeBuildInputs = [pkgs.makeWrapper];
-          buidlInputs = [PythonEnv];
+        nativeBuildInputs = [pkgs.makeWrapper];
+        buidlInputs = [PythonEnv];
 
-          installPhase = ''
-            mkdir -p $out/bin
-            cp main.py $out/bin/${projNixPkg.pname}-script
-            chmod +x $out/bin/${projNixPkg.pname}-script
-            makeWrapper ${PythonEnv}/bin/python $out/bin/${projNixPkg.pname} \
-              --add-flags $out/bin/${projNixPkg.pname}--script
+        installPhase = ''
+          mkdir -p $out/bin
+          cp main.py $out/bin/${projNixPkg.pname}-script
+          chmod +x $out/bin/${projNixPkg.pname}-script
+          makeWrapper ${PythonEnv}/bin/python $out/bin/${projNixPkg.pname} \
+            --add-flags $out/bin/${projNixPkg.pname}-script
 
-          '';
-        };
-      }
-    );
+        '';
+      };
+    in {
+      nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
+        modules = [
+          ./configuration.nix
+          {
+            environment.systemPackages = [
+              fastapi-app
+            ];
+          }
+        ];
+      };
+    };
 }
